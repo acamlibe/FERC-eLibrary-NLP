@@ -5,6 +5,9 @@ import pytesseract
 from PIL import Image
 import re
 import subprocess
+import chardet
+
+Image.MAX_IMAGE_PIXELS = None
 
 FILES_DIR = '../Scraper/files'
 EXTRACTED_DIR = 'files'
@@ -25,11 +28,17 @@ def read_docx(file_path):
 
 
 def read_tif(file_path):
-    image = Image.open(file_path)
-    return pytesseract.image_to_string(image)
+    text = ""
+    custom_config = r'--oem 1' 
+    with Image.open(file_path) as img:
+        for page in range(img.n_frames):
+            img.seek(page)
+            text += pytesseract.image_to_string(img, config=custom_config)
+    return text
+
 
 def read_txt(file_path):
-    with open(file_path, 'r', encoding='iso-8859-1') as file:
+    with open(file_path, 'r', encoding='iso-8859-1', errors='replace') as file:
         return file.read()
     
 def read_wpd(file_path):
@@ -73,6 +82,11 @@ def read_doc(file_path):
     with open(temp_path, 'r', encoding='utf-8', errors='ignore') as file:
         return file.read()
 
+def clean_text(text):
+    # Remove non-printable characters (excluding newline and tab)
+    cleaned = re.sub(r'[^\x20-\x7E\n\t]+', '', text)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
 
 for project_folder in os.listdir(FILES_DIR):
     project_dir = os.path.join(FILES_DIR, project_folder)
@@ -105,4 +119,4 @@ for project_folder in os.listdir(FILES_DIR):
             case _: continue
 
         with open(extracted_file_path, 'w+') as file:
-            file.write(text)
+            file.write(clean_text(text))

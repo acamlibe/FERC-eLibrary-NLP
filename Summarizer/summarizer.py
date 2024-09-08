@@ -5,7 +5,9 @@ import nltk
 nltk.download('punkt')
 nltk.download('punkt_tab')
 
-FOLDER = '../TextExtractor/files/P-1005'
+PROJECT_ID = 'P-1025'
+
+FOLDER = f'../TextExtractor/files/{PROJECT_ID}'
 
 MODEL = 'philschmid/bart-large-cnn-samsum'
 
@@ -56,7 +58,7 @@ def summarize(text):
     return ' '.join(chunk_summaries)
 
 
-all_summarization = ''
+summarizations = []
 
 for file_name in os.listdir(FOLDER):
     path = os.path.join(FOLDER, file_name)
@@ -64,10 +66,19 @@ for file_name in os.listdir(FOLDER):
     with open(path, 'r') as file:
         text = file.read().strip()
 
-    summarization = summarize(text)
-    print(summarization)
-    all_summarization += summarization
+    summary = summarize(text)
+    summarizations.append(summary)
+    
 
-combined_summary = summarize(all_summarization)
+summary_of_summaries = summarize(' '.join(summarizations))
 
-print('\n\n\n' + combined_summary)
+summaries_dir = 'summaries'
+if not os.path.exists(summaries_dir):
+    os.mkdir(summaries_dir)
+
+summary_path = os.path.join(summaries_dir, PROJECT_ID + '.txt')
+
+with open(summary_path, 'w') as f:
+    f.write('\n\n'.join(summarizations))
+    f.write('\n\n\nConclusion:\n')
+    f.write(summary_of_summaries)
