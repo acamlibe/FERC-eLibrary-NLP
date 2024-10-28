@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import requests
 import random
+import mimetypes
 import time
 
 
@@ -16,7 +17,8 @@ filtered_df = filtered_df[['Project Numbers', 'File Id']]
 
 filtered_df = filtered_df.dropna()
 
-
+proj_list = pd.read_csv('projects-list.csv')
+proj_list = set(proj_list['Id'].unique())
 
 PROCESSED_FILE_NAME = 'processed_file_ids.txt'
 FAILED_FILES_NAME = 'failed_file_ids.txt'
@@ -59,9 +61,13 @@ def download_file(proj_number, file_id):
     if response.status_code == 200:
         # The folder where the file should be saved
         folder_path = os.path.join(os.getcwd(), 'downloads', proj_number)
+        os.makedirs(folder_path, exist_ok=True)
+
+        content_disposition = response.headers.get('Content-Disposition')
         
-        # Assuming the file name comes from headers or can be determined
-        file_name = f"{file_id}.pdf"  # Modify this based on the file type you're expecting
+        file_name = content_disposition.split('filename=')[1].strip('"')
+
+      
         
         # Full path for the file
         file_path = os.path.join(folder_path, file_name)
@@ -71,10 +77,12 @@ def download_file(proj_number, file_id):
             file.write(response.content)
         
         print(f"File {file_name} downloaded successfully to {folder_path}")
+        return True
     else:
         failed_file_ids.add(file_id)
         append_line(FAILED_FILES_NAME, file_id)
         print(f"Failed to download the file. Status code: {response.status_code} {response.text} {file_id}")
+        return False
 
 
 
@@ -94,6 +102,10 @@ for index, row in filtered_df.iterrows():
 
     for proj_number in proj_numbers:
         print('Processing Project Number: ', proj_number)
+
+        # if proj_number not in proj_list:
+        #     print('Skipping due to not being in filtered proj list')
+        #     continue
 
         if proj_number == '0':
             print('Skipping due to 0 project number')
@@ -115,12 +127,13 @@ for index, row in filtered_df.iterrows():
                 print('Skipping file id already processed')
                 continue
 
-            download_file(proj_number, file_id)
-            
-            processed_file_ids.add(file_id)
-            append_line(PROCESSED_FILE_NAME, file_id)
+            success = download_file(proj_number, file_id)
 
-            seconds = random.randint(3, 10)
+            if success:
+                processed_file_ids.add(file_id)
+                append_line(PROCESSED_FILE_NAME, file_id)
+
+            seconds = random.randint(1, 3)
 
             print(f'Sleeping {seconds} seconds')
             time.sleep(seconds)

@@ -3,3 +3,6 @@
 */files/
 */temp/
 */downloads
+/TopicModeling/venv/*
+*.zip
+*.png
