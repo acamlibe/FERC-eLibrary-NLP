@@ -6,3 +6,5 @@
 /TopicModeling/venv/*
 *.zip
 *.png
+*/bin
+*/obj

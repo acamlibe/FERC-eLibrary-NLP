@@ -5,9 +5,7 @@ import nltk
 nltk.download('punkt')
 nltk.download('punkt_tab')
 
-PROJECT_ID = 'P-1025'
-
-FOLDER = f'../TextExtractor/files/{PROJECT_ID}'
+FILES_FOLDER = f'../TextExtractor/files'
 
 MODEL = 'philschmid/bart-large-cnn-samsum'
 
@@ -60,25 +58,38 @@ def summarize(text):
 
 summarizations = []
 
-for file_name in os.listdir(FOLDER):
-    path = os.path.join(FOLDER, file_name)
+project_ids = [name for name in os.listdir(FILES_FOLDER) if os.path.isdir(os.path.join(FILES_FOLDER, name))]
 
-    with open(path, 'r') as file:
-        text = file.read().strip()
-
-    summary = summarize(text)
-    summarizations.append(summary)
-    
-
-summary_of_summaries = summarize(' '.join(summarizations))
 
 summaries_dir = 'summaries'
 if not os.path.exists(summaries_dir):
     os.mkdir(summaries_dir)
 
-summary_path = os.path.join(summaries_dir, PROJECT_ID + '.txt')
+for project_id in project_ids:
+    if os.path.exists(os.path.join('summaries', f'{project_id}.txt')):
+        print(f'Skipping {project_id}')
+        continue
 
-with open(summary_path, 'w') as f:
-    f.write('\n\n'.join(summarizations))
-    f.write('\n\n\nConclusion:\n')
-    f.write(summary_of_summaries)
+    print(f'Processing {project_id}')
+    for file_name in os.listdir(os.path.join(FILES_FOLDER, project_id)):
+        print(f'Summarizing {file_name}')
+        path = os.path.join(FILES_FOLDER, project_id, file_name)
+
+        with open(path, 'r') as file:
+            text = file.read().strip()
+
+        try:
+            summary = summarize(text)
+        except:
+            continue
+
+        summarizations.append(summary)
+
+    summary_path = os.path.join(summaries_dir, project_id + '.txt')
+
+    with open(summary_path, 'w') as f:
+        f.write('\n\n'.join(summarizations))
+    
+
+#summary_of_summaries = summarize(' '.join(summarizations))
+

@@ -96,7 +96,7 @@ for project_folder in os.listdir(FILES_DIR):
 
         file_name, extension = os.path.splitext(document)
 
-        extracted_file_dir = os.path.join(EXTRACTED_DIR)
+        extracted_file_dir = os.path.join(EXTRACTED_DIR, project_folder)
         extracted_file_path = os.path.join(extracted_file_dir, file_name + '.txt')
 
         if os.path.exists(extracted_file_path):
