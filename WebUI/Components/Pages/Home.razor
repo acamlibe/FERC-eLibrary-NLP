@@ -17,7 +17,7 @@
 
 }
 
-<RadzenText Text="@summary" />
+@summary
 
 @code {
     IEnumerable<string>? allProjects;
@@ -39,15 +39,10 @@
 
     async Task OnProjectSelect()
     {
-
-
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         string path = Path.Join(home, "Internship", "Summarizer", "summaries", $"{projectId}.txt");
 
 
         summary = await File.ReadAllTextAsync(path);
-
-                Logger.LogInformation(summary);
-
     }
 }
