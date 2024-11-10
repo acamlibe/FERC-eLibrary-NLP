@@ -1,48 +1,85 @@
 ﻿@page "/"
 
 @inject ILogger<Home> Logger
+@inject IDbContextFactory<FercSummaryContext> DbContextFactory
+@inject IJSRuntime JS
 
 <PageTitle>Home</PageTitle>
 
 @if (allProjects is not null)
 {
-    <RadzenFormField Text="Project ID">
-        <RadzenDropDown TValue="string" 
-                        Data="@allProjects" 
-                        @bind-Value="projectId" 
-                        AllowFiltering="true" 
-                        AllowVirtualization="true"
-                        Change="OnProjectSelect" />
-    </RadzenFormField>
+    <RadzenStack Orientation="Orientation.Vertical">
+        <RadzenFormField Text="Project ID">
+            <RadzenDropDown TValue="string" 
+                            Data="@allProjects" 
+                            @bind-Value="projectId" 
+                            AllowFiltering="true" 
+                            AllowVirtualization="true"
+                            Change="OnProjectSelect" />
+        </RadzenFormField>
+
+        <RadzenAccordion>
+            <Items>
+                @foreach (SummaryModel summary in summaries)
+                {
+                    <RadzenAccordionItem Text="@summary.FileName">
+                        <RadzenButton Text="Download" Icon="download" Click="async () => await DownloadSummary(summary)" />
+                        <RadzenStack Orientation="Orientation.Horizontal">
+                            <RadzenCard style="width: 50%;">
+                                <RadzenText TextStyle="TextStyle.Overline" Text="Summary" />
+                                <RadzenText Text="@summary.SummaryText" />
+                            </RadzenCard>
+                            <RadzenCard style="width: 50%;">
+                                <RadzenText TextStyle="TextStyle.Overline" Text="Original" />
+                                <RadzenText Text="@summary.OriginalText" />
+                            </RadzenCard>
+                        </RadzenStack>
+                    </RadzenAccordionItem>
+                }
+            </Items>
+        </RadzenAccordion>
+        
+
+
+    </RadzenStack>
 
 }
 
-@summary
+
+
+
 
 @code {
-    IEnumerable<string>? allProjects;
+    private record SummaryModel(int SummaryId, string SummaryText, string OriginalText, string FileName);
+
+    List<string>? allProjects;
 
     string? projectId;
 
-    string? summary;
+    List<SummaryModel> summaries = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string path = Path.Join(home, "Internship", "TextExtractor", "files");
+        await using var context = await DbContextFactory.CreateDbContextAsync();
 
-        Logger.LogInformation(path);
-
-        allProjects = Directory.GetDirectories(path)
-            .Select(x => Path.GetFileName(x)!).ToList();
+        allProjects = await context.Summaries
+            .Select(s => s.ProjectId)
+            .Distinct()
+            .ToListAsync();
     }
 
     async Task OnProjectSelect()
     {
-        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        string path = Path.Join(home, "Internship", "Summarizer", "summaries", $"{projectId}.txt");
+        await using var context = await DbContextFactory.CreateDbContextAsync();
 
+        summaries = await context.Summaries
+            .Where(s => s.ProjectId == projectId)
+            .Select(s => new SummaryModel(s.SummaryId, s.SummaryText, s.FileText, s.OriginalFileName))
+            .ToListAsync();
+    }
 
-        summary = await File.ReadAllTextAsync(path);
+    async Task DownloadSummary(SummaryModel summary)
+    {
+        await JS.InvokeVoidAsync("triggerFileDownload", summary.FileName, $"api/files/{summary.SummaryId}");
     }
 }

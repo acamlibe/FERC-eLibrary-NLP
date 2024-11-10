@@ -1,4 +1,5 @@
 using Radzen;
+using WebUI;
 using WebUI.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddRadzenComponents();
+
+builder.Services.AddDbContextFactory<FercSummaryContext>();
+
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -26,5 +31,7 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapControllers();
 
 app.Run();
