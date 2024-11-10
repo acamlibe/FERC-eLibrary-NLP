@@ -73,7 +73,12 @@ def save_project(project_id, summarizations):
     for summary in summarizations:
         proj_folder = os.path.join('../APIScraper/downloads', project_id)
         file_path = ''
-        for infile in glob.glob(os.path.join(proj_folder, f'{summary['file_name'].replace('.txt', '')}.*')):
+
+        file_name_no_ext = glob.escape(summary['file_name'].replace('.txt', ''))
+
+        pattern = os.path.join(proj_folder, f'{file_name_no_ext}.*')
+
+        for infile in glob.glob(pattern):
             file_path = infile
             break
 
