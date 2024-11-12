@@ -18,6 +18,7 @@ public partial class FercSummaryContext : DbContext
     public virtual DbSet<Project> Projects { get; set; }
 
     public virtual DbSet<Summary> Summaries { get; set; }
+    public DbSet<ProjectSummary> ProjectSummaries { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=fercsummary;Username=alic;Password=FercSummary!");
@@ -86,13 +87,22 @@ public partial class FercSummaryContext : DbContext
         {
             entity.HasKey(e => e.SummaryId).HasName("summary_pkey");
 
-            entity.ToTable("summary");
+            entity.ToTable("file_summary");
 
             entity.Property(e => e.SummaryId).HasColumnName("summary_id");
             entity.Property(e => e.ExtractedFileName).HasColumnName("extracted_file_name");
             entity.Property(e => e.FileBinary).HasColumnName("file_binary");
             entity.Property(e => e.FileText).HasColumnName("file_text");
             entity.Property(e => e.OriginalFileName).HasColumnName("original_file_name");
+            entity.Property(e => e.ProjectId).HasColumnName("project_id");
+            entity.Property(e => e.SummaryText).HasColumnName("summary_text");
+        });
+
+        modelBuilder.Entity<ProjectSummary>(entity => 
+        {
+            entity.HasKey(e => e.ProjectId).HasName("project-summary_pkey");
+            entity.ToTable("project_summary");
+
             entity.Property(e => e.ProjectId).HasColumnName("project_id");
             entity.Property(e => e.SummaryText).HasColumnName("summary_text");
         });
