@@ -1,71 +1,30 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import os
-import nltk
 import psycopg2
 import glob
 from transformers import pipeline
-from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter, TokenTextSplitter
-
-
-nltk.download('punkt')
-nltk.download('punkt_tab')
+from langchain_core.prompts import PromptTemplate
+from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from langchain_core.output_parsers import StrOutputParser
+from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
+from langchain_community.document_transformers import EmbeddingsClusteringFilter
+from langchain.chains.summarize import load_summarize_chain
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 
 FILES_FOLDER = f'../TextExtractor/files'
 
-MODEL = 'philschmid/bart-large-cnn-samsum'
-
-tokenizer = AutoTokenizer.from_pretrained("suriya7/bart-finetuned-text-summarization")
-model = AutoModelForSeq2SeqLM.from_pretrained("suriya7/bart-finetuned-text-summarization")
-
 conn = psycopg2.connect(database='fercsummary', host='localhost', port='5432', user='alic', password='FercSummary!')
 
-text_splitter = TokenTextSplitter(
-    # Set a really small chunk size, just to show.
-    chunk_size=1000,
-    chunk_overlap=0
-)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=80, length_function=len, is_separator_regex=False)
 
-def chunk_text(sentences, max_tokens=980):
-    length = 0
-    chunk = ''
-    all_chunks = []
+model_name = 'dunzhang/stella_en_1.5B_v5'
+model_kwargs = {"device": "cuda"}
+encode_kwargs = {"normalize_embeddings": True}
+embeddings = HuggingFaceBgeEmbeddings(model_name=model_name, model_kwargs=model_kwargs, encode_kwargs=encode_kwargs)
+
+summarizer = pipeline("summarization", model="facebook/bart-large-cnn", max_length=1000, min_length=30)
     
-    for sentence in sentences:
-        sentence_length = len(tokenizer.tokenize(sentence))
-
-        if length + sentence_length <= max_tokens:
-            chunk += sentence + ' '
-            length += sentence_length
-        else:
-            # Append the completed chunk to all_chunks
-            all_chunks.append(chunk.strip())
-            # Start a new chunk with the current sentence
-            chunk = sentence + ' '
-            length = sentence_length
-
-    # Append any remaining chunk after the loop
-    if chunk.strip():
-        all_chunks.append(chunk.strip())
-        
-    return all_chunks
-
-
-
-def summarize(text):
-    sentences = nltk.tokenize.sent_tokenize(text)
-    all_chunks = text_splitter.split_text(text)
-
-    # Tokenize the prompt inputs
-    chunk_summary_inputs = [tokenizer(chunk, return_tensors="pt", truncation=True) for chunk in all_chunks]
-
-    chunk_summaries = []
-
-    for input in chunk_summary_inputs:
-        output = model.generate(**input, max_new_tokens=100, do_sample=False)
-        summary = tokenizer.decode(output[0], skip_special_tokens=True)
-        chunk_summaries.append(summary)
-
-    return ' '.join(chunk_summaries)
+# Initialize the Huggingface LLM wrapper
+hf_llm = HuggingFacePipeline(pipeline=summarizer)
 
 
 def already_summarized(project_id, extracted_file_name):
@@ -74,6 +33,21 @@ def already_summarized(project_id, extracted_file_name):
     exists = cursor.fetchone() is not None
     cursor.close()
     return exists
+
+
+def summarize(file_text):
+    filter = EmbeddingsClusteringFilter(embeddings=embeddings, num_clusters=10)
+
+    chunks = text_splitter.split_text(file_text)
+    try:
+        result = filter.transform_documents(documents=chunks)
+        checker_chain = load_summarize_chain(hf_llm, chain_type='stuff')
+        summary = checker_chain(result)
+        return summary
+    except Exception as e:
+        return str(e)
+    
+
 
 
 def save_project(project_id, summarizations, summary_of_summaries):
@@ -127,18 +101,17 @@ for project_id in project_ids:
         with open(path, 'r') as file:
             text = file.read().strip()
 
-        try:
-            summary = summarize(text)
-        except:
-            continue
+        summary = summarize(text)
 
         summarizations.append({'summary_text': summary, 'file_name': file_name, 'file_text': text })
 
     if len(summarizations) > 0:
         print('Summarizing summaries...')
         summary_texts = [summary['summary_text'] for summary in summarizations]
-        summary_of_summaries = summarize(' '.join(summary_texts))
 
+        all_summaries = ' '.join(summary_texts)
+
+        summary_of_summaries = summarize(all_summaries)
         save_project(project_id, summarizations, summary_of_summaries)
 
     summarizations = []

@@ -19,35 +19,32 @@
         </RadzenFormField>
 
         <RadzenStack Orientation="Orientation.Horizontal">
-            <RadzenCard Style="width: 500px">
+            <RadzenCard Style="width: 500px; height: max-content;">
                 @CardHeader("Project Summary")
                 <RadzenText Text="@projectSummary" />
             </RadzenCard>
 
-            <RadzenCard Style="width: calc(100% - 500px)">
-                @CardHeader("File Summaries")
-                <RadzenAccordion>
-                    <Items>
-                        @foreach (SummaryModel summary in summaries)
-                        {
-                            <RadzenAccordionItem Text="@summary.FileName">
-                                <RadzenStack Orientation="Orientation.Horizontal">
-                                    <RadzenCard style="width: 50%;">
-                                        @CardHeader("File Summary")
-                                        <RadzenText Text="@summary.SummaryText" />
-                                    </RadzenCard>
-                                    <RadzenCard style="width: 50%;">
-                                        @CardHeader("File Text")
-                                        <RadzenButton Text="Download" Icon="download" Click="async () => await DownloadSummary(summary)" Style="margin-bottom: 1rem;" />
+            <RadzenAccordion Style="width: calc(100% - 500px)">
+                <Items>
+                    @foreach (SummaryModel summary in summaries)
+                    {
+                        <RadzenAccordionItem Text="@summary.FileName">
+                            <RadzenStack Orientation="Orientation.Horizontal">
+                                <RadzenCard style="width: 50%; height: max-content;">
+                                    @CardHeader("File Summary")
+                                    <RadzenText Text="@summary.SummaryText" />
+                                </RadzenCard>
+                                <RadzenCard style="width: 50%; height: max-content;">
+                                    @CardHeader("File Text")
+                                    <RadzenButton Text="Download" Icon="download" Click="async () => await DownloadSummary(summary)" Style="margin-bottom: 1rem;" />
 
-                                        <RadzenText Text="@summary.OriginalText" />
-                                    </RadzenCard>
-                                </RadzenStack>
-                            </RadzenAccordionItem>
-                        }
-                    </Items>
-                </RadzenAccordion>
-            </RadzenCard>
+                                    <RadzenText Text="@summary.OriginalText" />
+                                </RadzenCard>
+                            </RadzenStack>
+                        </RadzenAccordionItem>
+                    }
+                </Items>
+            </RadzenAccordion>
         </RadzenStack>
 
 
