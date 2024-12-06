@@ -61,7 +61,7 @@ def summarize(text):
     chunk_summaries = []
 
     for input in chunk_summary_inputs:
-        output = model.generate(**input, max_new_tokens=100, do_sample=False)
+        output = model.generate(**input, max_new_tokens=300, do_sample=False)
         summary = tokenizer.decode(output[0], skip_special_tokens=True)
         chunk_summaries.append(summary)
 

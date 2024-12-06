@@ -10,54 +10,74 @@
 {
     <RadzenStack Orientation="Orientation.Vertical">
         <RadzenFormField Text="Project ID">
-            <RadzenDropDown TValue="string" 
-                            Data="@allProjects" 
-                            @bind-Value="projectId" 
-                            AllowFiltering="true" 
-                            AllowVirtualization="true"
-                            Change="OnProjectSelect" />
+            <RadzenDropDown TValue="string" Data="@allProjects" @bind-Value="projectId" AllowFiltering="true"
+                AllowVirtualization="true" Change="OnProjectSelect" />
         </RadzenFormField>
 
         <RadzenStack Orientation="Orientation.Horizontal">
-            <RadzenCard Style="width: 500px; height: max-content;">
-                @CardHeader("Project Summary")
-                <RadzenText Text="@projectSummary" />
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenCard Style="width: 500px; height: max-content;">
+                    @CardHeader("Project Summary")
+                    <RadzenText Text="@projectSummary" />
+                </RadzenCard>
+                <RadzenCard>
+                    @CardHeader("Issue Date")
+                    <RadzenText TextStyle="TextStyle.DisplayH6">September 27, 1988</RadzenText>
+                </RadzenCard>
+                <RadzenCard>
+                    @CardHeader("Expiration Date")
+                    <RadzenText TextStyle="TextStyle.DisplayH6">December 31, 2040</RadzenText>
+                </RadzenCard>
+                <RadzenCard>
+                    @CardHeader("Plant Capacity (KWh)")
+                    <RadzenText TextStyle="TextStyle.DisplayH6">30,000 KWh</RadzenText>
+                </RadzenCard>
+                <RadzenCard>
+                    @CardHeader("Dam Capacity (KWh)")
+                    <RadzenText TextStyle="TextStyle.DisplayH6">38,000 KWh</RadzenText>
+                </RadzenCard>
+                <RadzenCard>
+                    @CardHeader("Waterway")
+                    <RadzenText TextStyle="TextStyle.DisplayH6">Sacandaga River</RadzenText>
+                </RadzenCard>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Vertical" Style="width: 100%; height:max-content;">
+                <RadzenCard Style="width: 100%; height:max-content;">
+                    @CardHeader("Project File Summaries")
+                    <RadzenAccordion Multiple="true" Style="width: 100%">
+                        <Items>
+                            @foreach (SummaryModel summary in summaries)
+                                {
+                                    <RadzenAccordionItem Text="@summary.FileName">
+                                        <RadzenButton Text="Original File" Icon="download"
+                                            Click="async () => await DownloadSummary(summary)" Style="margin-bottom: 1rem;" />
+
+                                        <RadzenCard style="height: max-content;">
+                                            @CardHeader("File Summary")
+
+                                            <RadzenText Text="@summary.SummaryText" />
+                                        </RadzenCard>
+                                    </RadzenAccordionItem>
+                                }
+                        </Items>
+                    </RadzenAccordion>
+                </RadzenCard>
+                <RadzenCard Style="width: 100%; height: max-content">
+                    @CardHeader("Topic Analysis")
+                    <img src="topics.png"/>
+                </RadzenCard>
+            </RadzenStack>
+
+
+            <RadzenCard Style="width: 500px; height: max-content">
+                @CardHeader("Word Frequency (WordCloud)")
+                <img src="wordcloud.png"/>
             </RadzenCard>
-
-            <RadzenAccordion Style="width: calc(100% - 500px)">
-                <Items>
-                    @foreach (SummaryModel summary in summaries)
-                    {
-                        <RadzenAccordionItem Text="@summary.FileName">
-                            <RadzenStack Orientation="Orientation.Horizontal">
-                                <RadzenCard style="width: 50%; height: max-content;">
-                                    @CardHeader("File Summary")
-                                    <RadzenText Text="@summary.SummaryText" />
-                                </RadzenCard>
-                                <RadzenCard style="width: 50%; height: max-content;">
-                                    @CardHeader("File Text")
-                                    <RadzenButton Text="Download" Icon="download" Click="async () => await DownloadSummary(summary)" Style="margin-bottom: 1rem;" />
-
-                                    <RadzenText Text="@summary.OriginalText" />
-                                </RadzenCard>
-                            </RadzenStack>
-                        </RadzenAccordionItem>
-                    }
-                </Items>
-            </RadzenAccordion>
         </RadzenStack>
-
-
-
-        
-
-
     </RadzenStack>
 
 }
-
-
-
 
 
 @code {
@@ -70,17 +90,17 @@
     List<SummaryModel> summaries = [];
     string? projectSummary;
 
-    RenderFragment<string> CardHeader = text => 
-        @<RadzenText TextStyle="TextStyle.Overline" Text="@text" Style="margin-bottom: 1rem; display: block;" />;
+    RenderFragment<string> CardHeader = text =>
+@<RadzenText TextStyle="TextStyle.Overline" Text="@text" Style="margin-bottom: 1rem; display: block;" />;
 
     protected override async Task OnInitializedAsync()
     {
         await using var context = await DbContextFactory.CreateDbContextAsync();
 
         allProjects = await context.Summaries
-            .Select(s => s.ProjectId)
-            .Distinct()
-            .ToListAsync();
+        .Select(s => s.ProjectId)
+        .Distinct()
+        .ToListAsync();
     }
 
     async Task OnProjectSelect()
@@ -88,14 +108,14 @@
         await using var context = await DbContextFactory.CreateDbContextAsync();
 
         summaries = await context.Summaries
-            .Where(s => s.ProjectId == projectId)
-            .Select(s => new SummaryModel(s.SummaryId, s.SummaryText, s.FileText, s.OriginalFileName))
-            .ToListAsync();
+        .Where(s => s.ProjectId == projectId)
+        .Select(s => new SummaryModel(s.SummaryId, s.SummaryText, s.FileText, s.OriginalFileName))
+        .ToListAsync();
 
         projectSummary = await context.ProjectSummaries
-            .Where(ps => ps.ProjectId == projectId)
-            .Select(ps => ps.SummaryText)
-            .SingleAsync();
+        .Where(ps => ps.ProjectId == projectId)
+        .Select(ps => ps.SummaryText)
+        .SingleAsync();
     }
 
     async Task DownloadSummary(SummaryModel summary)
